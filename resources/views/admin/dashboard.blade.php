@@ -31,7 +31,20 @@
         <p class="text-3xl font-bold text-orange-600 mt-1">{{ $stats['high_priority'] }}</p>
     </div>
 </div>
+<div class="bg-white rounded-xl shadow-sm p-5">
+    <h4 class="font-semibold text-gray-700 mb-3">WhatsApp Gateway</h4>
 
+    <div class="flex flex-col items-center">
+
+        <img id="fonnte-qr" class="w-56 border rounded-lg"
+     src="https://via.placeholder.com/200?text=Loading+QR">
+
+        <p class="text-xs text-gray-400 mt-2">
+            Scan QR dengan WhatsApp Admin
+        </p>
+
+    </div>
+</div>
 <div class="grid grid-cols-3 gap-6">
 
     {{-- Tabel WO Urgent --}}
@@ -124,4 +137,28 @@
     </div>
 
 </div>
+<script>
+
+function loadQR(){
+
+    fetch('/admin/fonnte-qr')
+    .then(res => res.json())
+    .then(data => {
+
+        if(data.url){
+
+            document.getElementById("fonnte-qr").src =
+                "data:image/png;base64," + data.url;
+
+        }
+
+    })
+    .catch(err => console.log(err));
+
+}
+
+loadQR();
+setInterval(loadQR,5000);
+
+</script>
 @endsection

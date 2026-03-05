@@ -181,3 +181,8 @@ use Maatwebsite\Excel\Facades\Excel;
 Route::get('/admin/work-orders/export/completed', function () {
     return Excel::download(new CompletedWorkOrdersExport, 'work-orders-selesai.xlsx');
 })->name('admin.work-orders.export.completed');
+
+
+use App\Http\Controllers\Admin\DashboardController;
+
+Route::get('/admin/fonnte-qr', [DashboardController::class, 'qr']);
