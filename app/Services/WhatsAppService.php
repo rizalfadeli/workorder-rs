@@ -20,20 +20,30 @@ class WhatsAppService
 
         $normalized = $this->normalizeNumber($target);
 
+        if (empty($normalized)) {
+            Log::error('Nomor WhatsApp tidak valid.');
+            return false;
+        }
+
+        // waktu realtime WIB
+        $time = now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i');
+
         $messageBody =
-            "LAPORAN ANDA\n\n" .
+            "📢 *LAPORAN ANDA*\n\n" .
             "Halo {$wo->nama_pelapor},\n\n" .
-            "Laporan Anda sudah kami terima.\n\n" .
-            "Kode WO: {$wo->code}\n" .
-            "Barang: {$wo->item_name}\n" .
-            "Lokasi: {$wo->location}\n" .
-            "Deskripsi: {$wo->description}\n" .
-            "Waktu: " . $wo->created_at->format('d/m/Y H:i') . " WIB\n\n" .
-            "Tim teknisi akan segera menindaklanjuti laporan Anda.\n\n" .
-            "Terima kasih.";
+            "Laporan Anda sudah kami terima dengan detail berikut:\n\n" .
+            "🔖 *Kode WO:* {$wo->code}\n" .
+            "🖥 *Barang:* {$wo->item_name}\n" .
+            "📍 *Lokasi:* {$wo->location}\n" .
+            "📝 *Deskripsi:* {$wo->description}\n" .
+            "⏰ *Waktu:* {$time} WIB\n\n" .
+            "Tim teknisi kami akan segera menindaklanjuti laporan Anda.\n\n" .
+            "Terima kasih telah menggunakan sistem Work Order.";
 
         try {
+
             $response = Http::asForm()
+                ->timeout(30)
                 ->withHeaders([
                     'Authorization' => $token,
                 ])
@@ -43,17 +53,27 @@ class WhatsAppService
                     'countryCode' => '62',
                 ]);
 
-            $status = $response->json('status');
-            if ($response->successful() && $status !== false) {
-                Log::info("WhatsApp Fonnte berhasil dikirim ke {$normalized} (WO: {$wo->code})");
-                return true;
+            if ($response->successful()) {
+
+                $result = $response->json();
+
+                if (isset($result['status']) && $result['status'] !== false) {
+                    Log::info("WhatsApp berhasil dikirim ke {$normalized} (WO: {$wo->code})");
+                    return true;
+                }
+
+                Log::error('Fonnte API Error: ' . $response->body());
+                return false;
             }
 
-            Log::error('Fonnte API Error: ' . $response->body());
+            Log::error('HTTP Error Fonnte: ' . $response->body());
             return false;
+
         } catch (\Throwable $e) {
+
             Log::error('Fonnte Exception: ' . $e->getMessage());
             return false;
+
         }
     }
 
@@ -65,14 +85,17 @@ class WhatsAppService
             return '';
         }
 
+        // jika mulai dari 0
         if (str_starts_with($number, '0')) {
             return '62' . substr($number, 1);
         }
 
+        // jika sudah 62
         if (str_starts_with($number, '62')) {
             return $number;
         }
 
+        // default tambahkan 62
         return '62' . $number;
     }
 }
