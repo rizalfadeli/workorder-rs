@@ -1,81 +1,82 @@
 # Work Order RS (Laravel 12)
 
-Sistem Work Order untuk pelaporan kerusakan, tracking status, chat user-admin, export data, dan notifikasi WhatsApp via Fonnte.
+Sistem Work Order untuk pelaporan kerusakan, tracking status, chat user-admin, export data, dan notifikasi WhatsApp (Fonnte).
 
-## Fitur Utama
+## Pindah Hasil Push ke Windows
 
-- Laporan Work Order publik dan user login
-- Tracking kode Work Order
-- Dashboard admin dan user
-- Chat per Work Order
-- Export Work Order selesai ke Excel
-- Notifikasi WhatsApp otomatis saat Work Order dibuat
+## 1) Prasyarat di Windows
 
-## Kebutuhan Sistem (Linux Mint)
-
-- PHP 8.2+
+- Git
+- PHP 8.2+ (aktifkan extension: `pdo_mysql`, `mbstring`, `openssl`, `curl`, `fileinfo`, `zip`)
 - Composer 2.x
 - Node.js 20+ dan npm
-- MySQL/MariaDB atau SQLite
-- Ekstensi PHP umum Laravel (`mbstring`, `xml`, `curl`, `sqlite3`/`mysql`, `bcmath`, `zip`)
+- MySQL Server
 
-## Setup Cepat (Linux Mint)
+## 2) Ambil Kode Terbaru
 
-1. Install dependency backend dan frontend:
+```bash
+git clone https://github.com/rizalfadeli/workorder-rs.git
+cd workorder-rs
+git checkout WA
+git pull origin WA
+```
+
+## 3) Install Dependency
 
 ```bash
 composer install
 npm install
 ```
 
-2. Buat file environment:
+## 4) Buat dan Atur `.env`
 
 ```bash
-cp .env.example .env
+copy .env.example .env
 php artisan key:generate
 ```
 
-3. Atur database di `.env`.
-
-Contoh SQLite:
+Edit `.env` minimal:
 
 ```env
-DB_CONNECTION=sqlite
-```
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://127.0.0.1:8000
 
-Pastikan file DB ada:
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=workorder_rs
+DB_USERNAME=workorder_user
+DB_PASSWORD=PasswordKuat123!
 
-```bash
-mkdir -p database
-touch database/database.sqlite
-```
+SESSION_DRIVER=file
+CACHE_STORE=file
+QUEUE_CONNECTION=database
 
-4. Jalankan migrasi:
-
-```bash
-php artisan migrate
-```
-
-5. Buat symlink storage:
-
-```bash
-php artisan storage:link
-```
-
-6. Atur WhatsApp Fonnte di `.env`:
-
-```env
 FONNTE_TOKEN=ISI_TOKEN_FONNTE
 FONNTE_ENDPOINT=https://api.fonnte.com/send
 ```
 
-7. Bersihkan cache config:
+## 5) Buat Database MySQL
+
+Masuk MySQL lalu jalankan:
+
+```sql
+CREATE DATABASE IF NOT EXISTS workorder_rs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'workorder_user'@'127.0.0.1' IDENTIFIED BY 'PasswordKuat123!';
+GRANT ALL PRIVILEGES ON workorder_rs.* TO 'workorder_user'@'127.0.0.1';
+FLUSH PRIVILEGES;
+```
+
+## 6) Migrasi dan Storage Link
 
 ```bash
 php artisan config:clear
+php artisan migrate
+php artisan storage:link
 ```
 
-8. Jalankan aplikasi:
+## 7) Jalankan Aplikasi
 
 Terminal 1:
 
@@ -95,38 +96,13 @@ Terminal 3:
 npm run dev
 ```
 
-## Catatan Migrasi dari Windows ke Linux Mint
+## 8) Verifikasi
 
-- Path di Linux case-sensitive. Pastikan nama file dan import class huruf besar-kecilnya tepat.
-- Jalankan ulang `php artisan storage:link` setelah pindah environment.
-- Jika file upload gagal, cek hak akses:
+- App: `http://127.0.0.1:8000`
+- Test WA dummy: `http://127.0.0.1:8000/test-wa?target=08xxxxxxxxxx`
 
-```bash
-chmod -R ug+rw storage bootstrap/cache
-```
-
-- Jika pernah copy dari Windows dan ada masalah line ending:
+Jika error, cek log:
 
 ```bash
-git config core.autocrlf input
+type storage\logs\laravel.log
 ```
-
-- Jika `.env` lama terbawa dari Windows, cek lagi host DB, port, dan kredensial.
-
-## Verifikasi Fitur WhatsApp
-
-1. Device di dashboard Fonnte harus online.
-2. Buat Work Order baru dari halaman public atau user.
-3. Cek pesan masuk di nomor tujuan.
-4. Jika gagal, cek log:
-
-```bash
-tail -f storage/logs/laravel.log
-```
-
-## Testing
-
-```bash
-php artisan test
-```
-
