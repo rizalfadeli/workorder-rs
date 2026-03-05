@@ -1,59 +1,132 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Work Order RS (Laravel 12)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistem Work Order untuk pelaporan kerusakan, tracking status, chat user-admin, export data, dan notifikasi WhatsApp via Fonnte.
 
-## About Laravel
+## Fitur Utama
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Laporan Work Order publik dan user login
+- Tracking kode Work Order
+- Dashboard admin dan user
+- Chat per Work Order
+- Export Work Order selesai ke Excel
+- Notifikasi WhatsApp otomatis saat Work Order dibuat
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Kebutuhan Sistem (Linux Mint)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.2+
+- Composer 2.x
+- Node.js 20+ dan npm
+- MySQL/MariaDB atau SQLite
+- Ekstensi PHP umum Laravel (`mbstring`, `xml`, `curl`, `sqlite3`/`mysql`, `bcmath`, `zip`)
 
-## Learning Laravel
+## Setup Cepat (Linux Mint)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+1. Install dependency backend dan frontend:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+composer install
+npm install
+```
 
-## Laravel Sponsors
+2. Buat file environment:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-### Premium Partners
+3. Atur database di `.env`.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Contoh SQLite:
 
-## Contributing
+```env
+DB_CONNECTION=sqlite
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Pastikan file DB ada:
 
-## Code of Conduct
+```bash
+mkdir -p database
+touch database/database.sqlite
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+4. Jalankan migrasi:
 
-## Security Vulnerabilities
+```bash
+php artisan migrate
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+5. Buat symlink storage:
 
-## License
+```bash
+php artisan storage:link
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+6. Atur WhatsApp Fonnte di `.env`:
+
+```env
+FONNTE_TOKEN=ISI_TOKEN_FONNTE
+FONNTE_ENDPOINT=https://api.fonnte.com/send
+```
+
+7. Bersihkan cache config:
+
+```bash
+php artisan config:clear
+```
+
+8. Jalankan aplikasi:
+
+Terminal 1:
+
+```bash
+php artisan serve
+```
+
+Terminal 2:
+
+```bash
+php artisan queue:listen --tries=1 --timeout=0
+```
+
+Terminal 3:
+
+```bash
+npm run dev
+```
+
+## Catatan Migrasi dari Windows ke Linux Mint
+
+- Path di Linux case-sensitive. Pastikan nama file dan import class huruf besar-kecilnya tepat.
+- Jalankan ulang `php artisan storage:link` setelah pindah environment.
+- Jika file upload gagal, cek hak akses:
+
+```bash
+chmod -R ug+rw storage bootstrap/cache
+```
+
+- Jika pernah copy dari Windows dan ada masalah line ending:
+
+```bash
+git config core.autocrlf input
+```
+
+- Jika `.env` lama terbawa dari Windows, cek lagi host DB, port, dan kredensial.
+
+## Verifikasi Fitur WhatsApp
+
+1. Device di dashboard Fonnte harus online.
+2. Buat Work Order baru dari halaman public atau user.
+3. Cek pesan masuk di nomor tujuan.
+4. Jika gagal, cek log:
+
+```bash
+tail -f storage/logs/laravel.log
+```
+
+## Testing
+
+```bash
+php artisan test
+```
+
