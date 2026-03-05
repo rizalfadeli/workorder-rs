@@ -5,6 +5,9 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\PublicWorkOrderController;
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\User;
+use App\Models\WorkOrder;
+use App\Services\WhatsAppService;
+use Illuminate\Support\Facades\Mail;
 
 /*
 |--------------------------------------------------------------------------
@@ -144,6 +147,32 @@ Route::get('/test-email', function () {
     return 'Email dikirim';
 });
 
+Route::get('/test-wa', function (\Illuminate\Http\Request $request, WhatsAppService $whatsAppService) {
+    abort_unless(app()->environment('local'), 403, 'Route test hanya untuk environment local.');
+
+    $request->validate([
+        'target' => ['required', 'string', 'max:20'],
+    ]);
+
+    $wo = new WorkOrder([
+        'code' => 'WO-TEST',
+        'nama_pelapor' => 'Test User',
+        'item_name' => 'Perangkat Test',
+        'location' => 'Lokasi Test',
+        'description' => 'Ini pesan pengujian WhatsApp dari route /test-wa.',
+    ]);
+    $wo->created_at = now();
+
+    $ok = $whatsAppService->sendWorkOrderReceived($request->string('target')->toString(), $wo);
+
+    return response()->json([
+        'success' => $ok,
+        'target' => $request->string('target')->toString(),
+        'source_wo' => 'WO-TEST (dummy)',
+        'message' => $ok ? 'WA test terkirim.' : 'WA test gagal, cek storage/logs/laravel.log',
+    ], $ok ? 200 : 500);
+})->name('test.wa');
+
 
 
 use App\Exports\CompletedWorkOrdersExport;
@@ -152,4 +181,3 @@ use Maatwebsite\Excel\Facades\Excel;
 Route::get('/admin/work-orders/export/completed', function () {
     return Excel::download(new CompletedWorkOrdersExport, 'work-orders-selesai.xlsx');
 })->name('admin.work-orders.export.completed');
-

@@ -5,16 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\WorkOrder;
 use App\Models\Attachment;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
-use App\Mail\PublicWorkOrderMail;
+use App\Services\WhatsAppService;
 use Illuminate\Support\Str;
-use Twilio\Rest\Client;
-use Illuminate\Support\Facades\Http;
 
 class PublicWorkOrderController extends Controller
 {
+    public function __construct(private WhatsAppService $whatsAppService)
+    {
+    }
+
     public function landing(Request $request)
     {
         $query = WorkOrder::query();
@@ -73,6 +74,11 @@ class PublicWorkOrderController extends Controller
     public function create()
     {
         return view('public.lapor');
+    }
+
+    public function track()
+    {
+        return redirect()->to(route('landing') . '#tracking');
     }
 
     public function store(Request $request)
@@ -135,7 +141,7 @@ class PublicWorkOrderController extends Controller
             DB::commit();
 
             // 5. Kirim Notifikasi WhatsApp
-            $this->sendWhatsApp($request->whatsapp, $workOrder);
+            $this->whatsAppService->sendWorkOrderReceived((string) $request->whatsapp, $workOrder);
 
             return back()->with('success_data', [
                 'code'     => $workOrder->code,
@@ -150,56 +156,4 @@ class PublicWorkOrderController extends Controller
             return back()->withErrors(['error' => 'Gagal: ' . $e->getMessage()])->withInput();
         }
     }
-
-private function sendWhatsApp($target, $wo)
-{
-    $sid    = env('TWILIO_SID');
-    $token  = env('TWILIO_AUTH_TOKEN');
-    $from   = env('TWILIO_WHATSAPP_FROM');
-
-    // 1. Normalisasi nomor tujuan ke format internasional (628xxx)
-    if (substr($target, 0, 1) === '0') {
-        $target = '62' . substr($target, 1);
-    }
-    $recipient = "whatsapp:+" . $target;
-
-    // 2. Susun pesan Bahasa Indonesia secara detail di sini
-    $messageBody = "🔔 *LAPORAN ANDA* 🔔\n\n" .
-                   "Halo *{$wo->nama_pelapor}*,\n" .
-                   "Laporan Anda telah kami terima dengan detail berikut:\n" .
-                   "------------------------------------------\n" .
-                   "🆔 *Kode WO:* {$wo->code}\n" .
-                   "📦 *Barang:* {$wo->item_name}\n" .
-                   "📍 *Lokasi:* {$wo->location}\n" .
-                   "📝 *Deskripsi:* {$wo->description}\n" .
-                   "⏰ *Waktu:* " . $wo->created_at->format('d/m/Y H:i') . " WIB\n" .
-                   "------------------------------------------\n\n" .
-                   "Tim teknisi akan segera menindaklanjuti laporan Anda. Mohon tunggu informasi selanjutnya.\n\n" .
-                   " Terima kasih.";
-
-    try {
-        // 3. Kirim menggunakan HTTP Client Laravel dengan 'withoutVerifying' untuk PHP Global
-        $response = Http::withoutVerifying() 
-            ->withBasicAuth($sid, $token)
-            ->asForm()
-            ->post("https://api.twilio.com/2010-04-01/Accounts/{$sid}/Messages.json", [
-                'To'   => $recipient,
-                'From' => "whatsapp:" . $from,
-                'Body' => $messageBody, // Mengirim teks bebas tanpa Template SID
-            ]);
-
-        if ($response->successful()) {
-            \Log::info("WhatsApp berhasil dikirim ke $target (WO: $wo->code)");
-            return true;
-        }
-        
-        // Catat error jika Twilio menolak (misal: sesi sandbox habis)
-        \Log::error("Twilio API Error: " . $response->body());
-        return false;
-
-    } catch (\Exception $e) {
-        \Log::error("Twilio Exception: " . $e->getMessage());
-        return false;
-    }
-}
 }
