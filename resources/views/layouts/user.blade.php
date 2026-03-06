@@ -59,28 +59,7 @@
                           ? 'bg-blue-50 text-blue-600 font-semibold'
                           : 'text-gray-600 hover:bg-gray-100' }}">
                 Work Order Saya
-                <span id="nav-badge"
-                      class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs
-                             font-bold w-5 h-5 rounded-full items-center justify-center
-                             badge-pulse">
-                    0
-                </span>
             </a>
-
-            {{-- Bell notifikasi --}}
-            <div class="relative mx-2">
-                <button id="bell-btn"
-                        class="w-9 h-9 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center
-                               justify-center text-gray-600 transition relative">
-                    <i class="fas fa-bell"></i>
-                    <span id="bell-badge"
-                          class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs
-                                 font-bold w-5 h-5 rounded-full items-center justify-center
-                                 badge-pulse">
-                        0
-                    </span>
-                </button>
-            </div>
 
             <div class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 border-l ml-2">
                 <div class="w-7 h-7 bg-blue-100 text-blue-600 rounded-full flex items-center

@@ -71,7 +71,7 @@ class WhatsAppService
         }
 
         $normalized = $this->normalizeNumber($target);
-        $message = "Halo *{$wo->nama_pelapor}*,\n\nBerikut adalah lampiran dokumen *Berita Acara* untuk Work Order *{$wo->code}*.\n\nTerima kasih.";
+        $message = "Halo *{$wo->nama_pelapor}*,\n\nberita acara telah berhasil dibuat, cek pada email anda *{$wo->code}*.\n\nTerima kasih.";
 
         try {
             // Gunakan fopen untuk stream file (lebih efisien)

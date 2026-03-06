@@ -87,6 +87,7 @@ class PublicWorkOrderController extends Controller
         $request->validate([
             'name'         => 'required|string|max:255',
             'whatsapp'     => 'required|numeric',
+            'email'        => 'nullable|email|max:255',
             'location'     => 'required|string',
             'item_name'    => 'required|string',
             'kategori'     => 'required|string',
@@ -112,6 +113,7 @@ class PublicWorkOrderController extends Controller
                 'code'          => 'WO-' . strtoupper(Str::random(6)),
                 'nama_pelapor'     => $request->name,
                 'whatsapp'      => $request->whatsapp,
+                'email'         => $request->email, // tambahkan ini
                 'location'      => $request->location,
                 'item_name'     => $request->item_name,
                 'kategori'      => $request->kategori,
