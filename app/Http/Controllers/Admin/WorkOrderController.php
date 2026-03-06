@@ -243,13 +243,6 @@ class WorkOrderController extends Controller
             ->with('success', 'Berita Acara berhasil diperbarui.');
     }
 
-    public function unreadMessagesFor(int $userId): int
-{
-    return $this->chatMessages()
-        ->where('sender_id', '!=', $userId)
-        ->where('is_read', false)
-        ->count();
-}
     public function unreadCount()
 {
     $adminId = auth()->id();

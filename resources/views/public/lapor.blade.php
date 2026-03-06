@@ -57,6 +57,9 @@
                     </svg>
                 </div>
             </div>
+                        {{-- Email --}}
+            <input type="email" name="email" placeholder="Email Pelapor (Opsional)" value="{{ old('email') }}"
+                class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none">
 
             {{-- Lokasi --}}
             <input type="text" name="location" placeholder="Lokasi / Unit" value="{{ old('location') }}"

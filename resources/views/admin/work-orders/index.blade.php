@@ -46,9 +46,18 @@
     @endforeach
 </div>
 
+{{-- SEARCH (Tambahan) --}}
+<div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+    <input 
+        type="text"
+        id="searchWO"
+        placeholder="🔎 Cari kode WO, barang, pelapor, lokasi..."
+        class="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+</div>
+
 {{-- Tabel Work Order --}}
 <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-    <table class="w-full text-sm">
+    <table class="w-full text-sm" id="woTable">
         <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
             <tr>
                 <th class="px-6 py-4 text-left">Kode / Barang</th>
@@ -60,6 +69,7 @@
                 <th class="px-6 py-4 text-center">Aksi</th>
             </tr>
         </thead>
+
         <tbody class="divide-y divide-gray-100">
             @forelse($workOrders as $wo)
             @php
@@ -69,31 +79,34 @@
                 $sLabels   = ['submitted'=>'Diajukan','in_progress'=>'Diproses','completed'=>'Selesai','broken_total'=>'Rusak Total'];
                 $hasUnread = $wo->unread_count > 0;
             @endphp
-            <tr class="hover:bg-gray-50 transition">
 
-                {{-- Kode & Nama Barang --}}
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-2">
-                        @if($hasUnread)
-                            <span class="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0 animate-pulse"
-                                  title="Ada pesan belum dibaca"></span>
-                        @else
-                            <span class="w-2.5 h-2.5 rounded-full bg-gray-200 flex-shrink-0"></span>
-                        @endif
+            <tr class="hover:bg-gray-50 transition wo-row">
+
+                <td class="px-6 py-4 wo-search">
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            @if($hasUnread)
+                                <span class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse z-10">
+                                    {{ $wo->unread_count }}
+                                </span>
+                                <span class="w-3 h-3 rounded-full bg-red-500 animate-ping absolute inset-0"></span>
+                                <span class="w-3 h-3 rounded-full bg-red-500 relative"></span>
+                            @else
+                                <span class="w-3 h-3 rounded-full bg-gray-200"></span>
+                            @endif
+                        </div>
                         <div>
-                            <p class="font-semibold text-gray-800">{{ $wo->item_name }}</p>
-                            <p class="text-xs text-gray-400 font-mono">{{ $wo->code }}</p>
+                            <p class="font-semibold text-gray-800 leading-tight">{{ $wo->item_name }}</p>
+                            <p class="text-xs text-gray-400 font-mono mt-0.5">{{ $wo->code }}</p>
                         </div>
                     </div>
                 </td>
 
-                {{-- Pelapor --}}
-                <td class="px-6 py-4">
+                <td class="px-6 py-4 wo-search">
                     <p class="font-medium text-gray-800">{{ $wo->nama_pelapor ?? '-' }}</p>
                     <p class="text-xs text-gray-400">{{ $wo->location ?? '-' }}</p>
                 </td>
 
-                {{-- Prioritas --}}
                 <td class="px-6 py-4 text-center">
                     <span class="px-3 py-1 rounded-full text-xs font-bold
                                  bg-{{ $pColors[$wo->priority] }}-100
@@ -102,7 +115,6 @@
                     </span>
                 </td>
 
-                {{-- Status --}}
                 <td class="px-6 py-4 text-center">
                     <span class="px-3 py-1 rounded-full text-xs font-medium
                                  bg-{{ $sColors[$wo->status] }}-100
@@ -111,35 +123,29 @@
                     </span>
                 </td>
 
-                {{-- Teknisi --}}
                 <td class="px-6 py-4 text-sm text-gray-600">
                     {{ $wo->technician?->name ?? '—' }}
                 </td>
 
-                {{-- Tombol Chat + Badge unread --}}
                 <td class="px-6 py-4 text-center">
                     <a href="{{ route('admin.work-orders.chat', $wo) }}"
-                       class="relative inline-flex items-center gap-1.5 px-3 py-1.5
-                              rounded-lg text-xs font-medium transition
-                              {{ $hasUnread
-                                  ? 'bg-red-500 hover:bg-red-600 text-white'
-                                  : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700' }}">
-                        <i class="fas fa-comments"></i>
+                       class="relative inline-flex items-center px-3 py-1.5 rounded-lg text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 transition">
+                        <i class="fas fa-comments mr-1.5"></i>
                         <span>Chat</span>
                         @if($hasUnread)
-                            <span class="ml-1 bg-white text-red-500 text-xs font-bold
-                                         px-1.5 py-0.5 rounded-full leading-none">
-                                {{ $wo->unread_count > 99 ? '99+' : $wo->unread_count }}
+                            <span class="absolute -top-1 -right-1 flex h-4 w-4">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-white text-[9px] font-bold items-center justify-center">
+                                    {{ $wo->unread_count }}
+                                </span>
                             </span>
                         @endif
                     </a>
                 </td>
 
-                {{-- Detail --}}
                 <td class="px-6 py-4 text-center">
                     <a href="{{ route('admin.work-orders.show', $wo) }}"
-                       class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white
-                              rounded-lg text-xs transition">
+                       class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs">
                         Detail
                     </a>
                 </td>
@@ -148,7 +154,6 @@
             @empty
             <tr>
                 <td colspan="7" class="px-6 py-12 text-center text-gray-400">
-                    <i class="fas fa-inbox text-4xl mb-2 block"></i>
                     Tidak ada work order.
                 </td>
             </tr>
@@ -165,59 +170,25 @@
     </div>
 </div>
 
-<audio id="notifSound">
-    <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
-</audio>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
+{{-- SCRIPT SEARCH --}}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+document.getElementById("searchWO").addEventListener("keyup", function() {
 
-    const sound = document.getElementById('notifSound');
-    let alerted = {}; // Track WO yang sudah muncul alert
+    let keyword = this.value.toLowerCase();
+    let rows = document.querySelectorAll(".wo-row");
 
-    function checkUnread() {
-        fetch("{{ route('admin.unread-count') }}")
-            .then(res => res.json())
-            .then(data => {
-                if (!data.work_orders) return;
+    rows.forEach(function(row) {
 
-                data.work_orders.forEach(wo => {
-                    // Hanya alert jika unread_count >= 2
-                    if (wo.unread_count >= 2) {
-                        if (!alerted[wo.id]) {
-                            alerted[wo.id] = true;
+        let text = row.innerText.toLowerCase();
 
-                            sound.play().catch(() => {});
+        if(text.includes(keyword)){
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
 
-                            Swal.fire({
-                                title: '🚨 DOUBLE CHAT TERDETEKSI!',
-                                html: `
-                                    <div style="font-size:18px;margin-top:10px;">
-                                        Work Order <b>${wo.code}</b><br>
-                                        memiliki <b>${wo.unread_count}</b> pesan belum dibaca.
-                                    </div>
-                                `,
-                                icon: 'warning',
-                                confirmButtonText: 'Buka Chat',
-                                confirmButtonColor: '#dc2626'
-                            }).then(result => {
-                                if (result.isConfirmed) {
-                                    window.location.href = `/admin/work-orders/${wo.id}/chat`;
-                                }
-                            });
-                        }
-                    } else {
-                        // Jika unread_count turun < 2, hapus alert tracking
-                        delete alerted[wo.id];
-                    }
-                });
-            });
-    }
+    });
 
-    // Cek setiap 5 detik
-    setInterval(checkUnread, 5000);
 });
 </script>
 

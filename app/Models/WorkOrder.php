@@ -12,7 +12,7 @@ class WorkOrder extends Model
     protected $fillable = [
         'code', 'user_id', 'whatsapp', 'item_name', 'location', 'description',
         'priority', 'status', 'technician_id', 'estimated_days', 'admin_notes', 'berita_acara_file', 'berita_acara_generated_at',
-        'nama_pelapor','tanda_tangan', 'kategori','ttd_admin'
+        'nama_pelapor','tanda_tangan', 'kategori','ttd_admin','email'
     ];
     protected $casts = [
         'berita_acara_generated_at' => 'datetime',
@@ -136,6 +136,14 @@ class WorkOrder extends Model
     public function unreadMessagesFor(int $userId): int
     {
         if (!$this->relationLoaded('chat') || !$this->chat) return 0;
+
+        // Jika messages juga sudah diload, gunakan collection agar tidak query ulang
+        if ($this->chat->relationLoaded('messages')) {
+            return $this->chat->messages
+                ->where('sender_id', '!=', $userId)
+                ->where('is_read', false)
+                ->count();
+        }
 
         return $this->chat->messages()
             ->where('sender_id', '!=', $userId)
