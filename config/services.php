@@ -38,6 +38,8 @@ return [
     'fonnte' => [
         'token' => env('FONNTE_TOKEN'),
         'endpoint' => env('FONNTE_ENDPOINT', 'https://api.fonnte.com/send'),
+        'device_endpoint' => 'https://api.fonnte.com/device',
+        'qr_endpoint' => 'https://api.fonnte.com/qr',
     ],
 
 ];

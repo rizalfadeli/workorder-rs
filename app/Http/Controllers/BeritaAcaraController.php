@@ -1,15 +1,22 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\WorkOrder;
-use App\Mail\BeritaAcaraMail;
-use Illuminate\Support\Facades\Mail;
+use App\Services\WhatsAppService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class BeritaAcaraController extends Controller
-{   
+{
+    protected $whatsappService;
+
+    public function __construct(WhatsAppService $whatsappService)
+    {
+        $this->whatsappService = $whatsappService;
+    }
+
     public function generateBeritaAcara(Request $request, WorkOrder $workOrder)
     {
         // 1. Simpan TTD Admin
@@ -29,40 +36,40 @@ class BeritaAcaraController extends Controller
             ]);
         }
 
-        // 2. Logika Generate PDF Anda (tetap sama)
-        // ... proses PDF ...
-        // $pdf = PDF::loadView('pdf.berita_acara', $data);
-        // Storage::disk('public')->put($pdfPath, $pdf->output());
-
         return response()->json([
             'success' => true,
             'message' => 'Berita Acara dan Tanda Tangan berhasil disimpan!'
         ]);
     }
+
     public function kirim($id)
     {
         $workOrder = WorkOrder::findOrFail($id);
 
-        // Pastikan email ada
-        if (!$workOrder->email) {
-            return back()->with('error', 'Email tidak ditemukan pada work order.');
+        // Pastikan nomor WhatsApp ada
+        if (!$workOrder->whatsapp) {
+            return back()->with('error', 'Nomor WhatsApp tidak ditemukan pada work order.');
         }
 
         // Pastikan file berita acara ada
-        if (!$workOrder->berita_acara) {
-            return back()->with('error', 'File berita acara tidak tersedia.');
+        // Menggunakan kolom berita_acara_file sesuai model WorkOrder
+        $filePath = $workOrder->berita_acara_file;
+
+        if (!$filePath || !Storage::disk('public')->exists($filePath)) {
+            return back()->with('error', 'File berita acara tidak tersedia atau tidak ditemukan.');
         }
 
-        $filePath = $workOrder->berita_acara;
+        // Kirim melalui WhatsApp Service
+        $sent = $this->whatsappService->sendBeritaAcara(
+            $workOrder->whatsapp, 
+            $workOrder, 
+            $filePath
+        );
 
-        if (!Storage::disk('public')->exists($filePath)) {
-            return back()->with('error', 'File tidak ditemukan di storage.');
+        if ($sent) {
+            return back()->with('success', 'Berita acara berhasil dikirim melalui WhatsApp.');
         }
 
-        // Kirim ke email dari kolom work_orders.email
-        Mail::to($workOrder->email)
-            ->send(new BeritaAcaraMail($workOrder, $filePath));
-
-        return back()->with('success', 'Berita acara berhasil dikirim ke email.');
+        return back()->with('error', 'Gagal mengirim berita acara melalui WhatsApp. Periksa koneksi Fonnte.');
     }
 }

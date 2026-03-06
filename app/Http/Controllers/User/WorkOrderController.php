@@ -92,7 +92,7 @@ class WorkOrderController extends Controller
                 'kategori'      => $request->kategori,
                 'description'   => $request->description,
                 'tanda_tangan'  => $signaturePath,
-                'priority'      => 'medium',
+                'priority'      => 'low',
                 'status'        => 'submitted',
             ]);
 

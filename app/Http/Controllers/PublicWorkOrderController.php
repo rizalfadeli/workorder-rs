@@ -62,7 +62,7 @@ class PublicWorkOrderController extends Controller
                 'nama_pelapor'   => $wo->nama_pelapor,
                 'status'         => $wo->status,
                 'status_text'    => $statusLabels[$wo->status] ?? $wo->status,
-                'priority'       => strtoupper($wo->priority ?? 'Normal'),
+                'priority'       => strtoupper($wo->priority ?? 'low'),
                 'technician'     => $wo->technician->name ?? 'Belum Ditentukan',
                 'estimated_days' => $wo->estimated_days ?? '-',
                 'created_at'     => $wo->created_at->format('d M Y, H:i'),
