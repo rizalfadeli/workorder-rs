@@ -34,16 +34,66 @@
 <div class="bg-white rounded-xl shadow-sm p-5">
     <h4 class="font-semibold text-gray-700 mb-3">WhatsApp Gateway</h4>
 
-    <div class="flex flex-col items-center">
+    <div class="flex flex-col items-center space-y-3">
+        {{-- Area Tombol Dinamis --}}
+        <div id="wa-action-container">
+            <button onclick="showQR()" id="btn-connect-wa"
+                class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg shadow">
+                Hubungkan WhatsApp
+            </button>
+            <button onclick="disconnectWA()" id="btn-logout-wa"
+                class="hidden bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg shadow">
+                Logout WhatsApp
+            </button>
+        </div>
 
-        <img id="fonnte-qr" class="w-56 border rounded-lg"
-     src="https://via.placeholder.com/200?text=Loading+QR">
+        {{-- Status Terhubung --}}
+        <div id="wa-status-badge" class="hidden flex items-center gap-2 text-green-600 font-semibold text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            WhatsApp Terhubung
+        </div>
 
-        <p class="text-xs text-gray-400 mt-2">
-            Scan QR dengan WhatsApp Admin
-        </p>
-
+        <div class="text-xs text-gray-500 text-center space-y-1 max-w-xs">
+            <p class="font-semibold text-gray-600">Cara Menghubungkan WhatsApp</p>
+            <p>1. Buka aplikasi <b>WhatsApp</b> pada HP Admin.</p>
+            <p>2. Masuk ke menu <b>Perangkat Tertaut</b>.</p>
+            <p>3. Pilih <b>Tautkan Perangkat</b> lalu scan QR di atas.</p>
+        </div>
     </div>
+    <div id="qrModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 w-80 text-center shadow-lg">
+            <h3 class="font-semibold text-gray-700 mb-3">
+                Koneksi WhatsApp
+            </h3>
+
+            <div id="qr-container">
+                <img id="fonnte-qr" class="w-56 mx-auto border rounded-lg"
+                    src="https://via.placeholder.com/200?text=Loading+QR">
+            </div>
+
+            <div id="status-container" class="hidden py-4">
+                <div class="bg-green-100 text-green-700 p-3 rounded-lg flex flex-col items-center">
+                    <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <p class="font-bold">WhatsApp Terhubung!</p>
+                </div>
+            </div>
+
+            <p id="qr-message" class="text-sm mt-3 text-gray-600">
+                Silakan scan QR menggunakan WhatsApp anda.
+            </p>
+
+            <button onclick="closeQR()" class="mt-4 bg-gray-500 hover:bg-gray-600 text-white px-4 py-1 rounded">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
+
 </div>
 <div class="grid grid-cols-3 gap-6">
 
@@ -137,28 +187,116 @@
     </div>
 
 </div>
+
 <script>
+    let qrInterval = null;
 
-function loadQR(){
+    // Cek status saat halaman dimuat
+    document.addEventListener('DOMContentLoaded', () => {
+        loadQR(true); // Hanya cek status saat awal load
+    });
 
-    fetch('/admin/fonnte-qr')
-    .then(res => res.json())
-    .then(data => {
+    function showQR() {
+        document.getElementById("qrModal").classList.remove("hidden");
+        document.getElementById("qrModal").classList.add("flex");
+        
+        // Reset state modal
+        document.getElementById("qr-container").classList.remove("hidden");
+        document.getElementById("status-container").classList.add("hidden");
+        document.getElementById("fonnte-qr").src = "https://via.placeholder.com/200?text=Loading+QR";
+        document.getElementById("qr-message").innerText = "Menghubungkan ke Fonnte...";
+        
+        loadQR(false); // Ambil QR (satu kali saja)
+        
+        // Mulai polling STATUS saja setiap 5 detik (untuk deteksi hasil scan)
+        if(qrInterval) clearInterval(qrInterval);
+        qrInterval = setInterval(() => {
+            loadQR(true); // Kirim parameter true agar backend HANYA cek status (hemat limit)
+        }, 5000);
+    }
 
-        if(data.url){
+    function closeQR() {
+        document.getElementById("qrModal").classList.add("hidden");
+        if(qrInterval) clearInterval(qrInterval);
+    }
 
-            document.getElementById("fonnte-qr").src =
-                "data:image/png;base64," + data.url;
+    function updateUI(isConnected) {
+        const btnConnect = document.getElementById("btn-connect-wa");
+        const btnLogout = document.getElementById("btn-logout-wa");
+        const badgeStatus = document.getElementById("wa-status-badge");
 
+        if (isConnected) {
+            btnConnect.classList.add("hidden");
+            btnLogout.classList.remove("hidden");
+            badgeStatus.classList.remove("hidden");
+        } else {
+            btnConnect.classList.remove("hidden");
+            btnLogout.classList.add("hidden");
+            badgeStatus.classList.add("hidden");
         }
+    }
 
-    })
-    .catch(err => console.log(err));
+    function loadQR(statusOnly = false) {
+        const url = statusOnly ? '/admin/fonnte-qr?status_only=1' : '/admin/fonnte-qr';
 
-}
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                const qrImg = document.getElementById("fonnte-qr");
+                const qrMsg = document.getElementById("qr-message");
+                const qrCont = document.getElementById("qr-container");
+                const statCont = document.getElementById("status-container");
 
-loadQR();
-setInterval(loadQR,5000);
+                // Jika terhubung (BERHASIL SCAN)
+                if (data.device_status === 'connect' || data.message === 'Perangkat sudah terhubung.') {
+                    qrCont.classList.add("hidden");
+                    statCont.classList.remove("hidden");
+                    qrMsg.innerHTML = '<b class="text-green-600 uppercase tracking-wider">Berhasil Terhubung!</b><br>Silakan tutup modal ini.';
+                    updateUI(true);
+                    
+                    if(qrInterval) clearInterval(qrInterval);
+                    return;
+                }
 
+                updateUI(false);
+
+                // Tampilkan QR HANYA jika ini BUKAN statusOnly (panggilan pertama)
+                if (!statusOnly) {
+                    let qrCode = data.url || (data.data ? data.data.qr : null);
+
+                    if (qrCode) {
+                        qrCont.classList.remove("hidden");
+                        statCont.classList.add("hidden");
+                        qrImg.src = "data:image/png;base64," + qrCode;
+                        qrMsg.innerText = "Silakan scan QR menggunakan WhatsApp anda.";
+                    } else if(data.status === false) {
+                        qrMsg.innerHTML = `<span class="text-red-500 font-medium">${data.message || 'Limit tercapai atau Fonnte sedang sibuk.'}</span>`;
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Fetch Error:', err);
+            });
+    }
+
+    function disconnectWA() {
+        if (!confirm('Apakah Anda yakin ingin memutuskan koneksi WhatsApp?')) return;
+
+        fetch('https://api.fonnte.com/disconnect', {
+            method: 'POST',
+            headers: {
+                'Authorization': '{{ config('services.fonnte.token') }}'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert('WhatsApp Berhasil Diputus.');
+            location.reload();
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Gagal memutuskan koneksi.');
+        });
+    }
 </script>
 @endsection

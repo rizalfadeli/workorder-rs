@@ -34,7 +34,7 @@
             <div class="grid grid-cols-2 gap-4 text-sm mb-4">
                 <div>
                     <p class="text-gray-400">Pelapor</p>
-                    <p class="font-medium">{{ $workOrder->user->name }}</p>
+                    <p class="font-medium">{{ $workOrder->nama_pelapor }}</p>
                 </div>
                 <div>
                     <p class="text-gray-400">Unit / Lokasi</p>

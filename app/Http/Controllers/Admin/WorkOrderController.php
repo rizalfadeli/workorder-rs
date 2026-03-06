@@ -16,9 +16,18 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\BeritaAcaraMail;
 use App\Mail\TechnicianAssignedMail;
 use App\Models\ChatMessage;
+use App\Services\WhatsAppService;
+use App\Services\WhatsAppTeknisi;
 
 class WorkOrderController extends Controller
 {
+    protected $whatsappService;
+
+    public function __construct(WhatsAppService $whatsappService)
+    {
+        $this->whatsappService = $whatsappService;
+    }
+
     /**
      * LIST SEMUA WORK ORDER
      */
@@ -64,24 +73,33 @@ class WorkOrderController extends Controller
     /**
      * UPDATE PRIORITAS / TEKNISI / ESTIMASI
      */
-    public function update(UpdateWorkOrderRequest $request, WorkOrder $workOrder)
-    {
-        $validated = $request->validated();
-        $oldTechnicianId = $workOrder->technician_id;
+   public function update(UpdateWorkOrderRequest $request, WorkOrder $workOrder, WhatsAppTeknisi $waTeknisi)
+{
+    $validated = $request->validated();
+    $oldTechnicianId = $workOrder->technician_id;
 
-        $workOrder->update($validated);
+    $workOrder->update($validated);
 
-        if (isset($validated['technician_id']) && $validated['technician_id'] != $oldTechnicianId) {
-            $technician = Technician::find($validated['technician_id']);
-            if ($technician && !empty($technician->email)) {
-                // Email Penugasan Teknisi menggunakan Queue
-                Mail::to($technician->email)->queue(new TechnicianAssignedMail($workOrder));
+    // Jika teknisi diganti, kirim WA
+    if (isset($validated['technician_id']) && $validated['technician_id'] != $oldTechnicianId) {
+        $technician = Technician::find($validated['technician_id']);
+
+        if ($technician && !empty($technician->phone)) {
+
+            $phone = $technician->phone;
+
+            // ubah 0 di depan menjadi 62
+            if (substr($phone, 0, 1) === '0') {
+                $phone = '62' . substr($phone, 1);
             }
-        }
 
-        return redirect()->route('admin.work-orders.show', $workOrder)
-            ->with('success', 'Work order berhasil diperbarui.');
+            $waTeknisi->sendWorkOrderReceived($phone, $workOrder);
+        }
     }
+
+    return redirect()->route('admin.work-orders.show', $workOrder)
+        ->with('success', 'Work order berhasil diperbarui.');
+}
 
     /**
      * UPDATE STATUS + AUDIT LOG
@@ -160,6 +178,7 @@ class WorkOrderController extends Controller
         }
 
         // 2. Persiapan Data & Render PDF
+        set_time_limit(120); // Tambah waktu agar tidak timeout saat render & kirim WA
         $workOrder->loadMissing(['user', 'technician', 'images']);
         $tanggal = now()->format('d M Y');
 
@@ -180,7 +199,8 @@ class WorkOrderController extends Controller
         }
 
         $fileName = $baFolder . '/BA_' . $workOrder->code . '.pdf';
-        Storage::disk('public')->put($fileName, $pdf->output());
+        $pdfOutput = $pdf->output();
+        Storage::disk('public')->put($fileName, $pdfOutput);
 
         // Update info PDF di Database
         $workOrder->update([
@@ -188,17 +208,34 @@ class WorkOrderController extends Controller
             'berita_acara_generated_at' => now()
         ]);
 
-        // 4. Kirim Email ke Pelapor menggunakan Queue
-        if (!empty($workOrder->email)) {
-            Mail::to($workOrder->email)
-                ->send(new BeritaAcaraMail($workOrder, $fileName));
+        // 4. Kirim Berita Acara melalui WhatsApp ke Pelapor (Teks Saja)
+        $waSent = false;
+        if (!empty($workOrder->whatsapp)) {
+            $waSent = $this->whatsappService->sendBeritaAcara($workOrder->whatsapp, $workOrder, $fileName);
         }
 
-        // 5. Response Handling
+        // 5. KIRIM EMAIL (DENGAN LAMPIRAN PDF)
+        $mailSent = false;
+        $pelaporEmail = $workOrder->email ?? ($workOrder->user->email ?? null);
+
+        if (!empty($pelaporEmail)) {
+            try {
+                Mail::to($pelaporEmail)->send(new BeritaAcaraMail($workOrder, $fileName));
+                $mailSent = true;
+            } catch (\Exception $e) {
+                Log::error("Gagal kirim email Berita Acara: " . $e->getMessage());
+            }
+        }
+
+        // 6. Response Handling
         if ($request->expectsJson()) {
+            $msg = 'Berita Acara berhasil dibuat.';
+            $msg .= $waSent ? ' WA terkirim.' : ' WA gagal (hanya teks).';
+            $msg .= $mailSent ? ' Email PDF terkirim ke ' . $pelaporEmail : ' Email gagal/tidak ada.';
+
             return response()->json([
                 'success' => true,
-                'message' => 'Tanda tangan disimpan dan Berita Acara berhasil dibuat.'
+                'message' => $msg
             ]);
         }
 
